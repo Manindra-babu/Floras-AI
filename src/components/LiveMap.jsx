@@ -22,12 +22,13 @@ import {
   Share2,
   ShieldAlert,
   Check,
-  Eye
+  Eye,
+  Stethoscope
 } from 'lucide-react'
 import ImageSlider from './ImageSlider'
 import ShareCard from './ShareCard'
 
-export default function LiveMap({ selectedTreeId, setSelectedTreeId }) {
+export default function LiveMap({ selectedTreeId, setSelectedTreeId, setChatContext }) {
   const { user } = useAuth()
   
   // Data States
@@ -707,23 +708,43 @@ export default function LiveMap({ selectedTreeId, setSelectedTreeId }) {
                         <span>Update Tree Status</span>
                       </button>
                       
-                      <button
-                        onClick={() => setShowShareModal(true)}
-                        className="w-full flex items-center justify-center gap-2 bg-forest hover:bg-forest-hover text-offwhite font-bold py-3 rounded-xl text-sm transition-colors cursor-pointer shadow-md"
-                      >
-                        <Share2 className="h-4 w-4" />
-                        <span>Share Tree Card</span>
-                      </button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => setShowShareModal(true)}
+                          className="flex items-center justify-center gap-2 bg-forest hover:bg-forest-hover text-offwhite font-bold py-3 rounded-xl text-xs transition-colors shadow-md cursor-pointer"
+                        >
+                          <Share2 className="h-4 w-4 shrink-0" />
+                          <span>Share Card</span>
+                        </button>
+                        
+                        <button
+                          onClick={() => setChatContext({ species: details.species, status: details.current_status })}
+                          className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-offwhite font-bold py-3 rounded-xl text-xs transition-colors shadow-md cursor-pointer"
+                        >
+                          <Stethoscope className="h-4 w-4 shrink-0 text-terracotta" />
+                          <span>Ask AI Doctor</span>
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <button
-                        onClick={() => setShowShareModal(true)}
-                        className="w-full flex items-center justify-center gap-2 bg-forest hover:bg-forest-hover text-offwhite font-bold py-3 rounded-xl text-sm transition-colors cursor-pointer shadow-md"
-                      >
-                        <Share2 className="h-4 w-4" />
-                        <span>Share Tree Card</span>
-                      </button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => setShowShareModal(true)}
+                          className="flex items-center justify-center gap-2 bg-forest hover:bg-forest-hover text-offwhite font-bold py-3 rounded-xl text-xs transition-colors shadow-md cursor-pointer"
+                        >
+                          <Share2 className="h-4 w-4 shrink-0" />
+                          <span>Share Card</span>
+                        </button>
+                        
+                        <button
+                          onClick={() => setChatContext({ species: details.species, status: details.current_status })}
+                          className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-offwhite font-bold py-3 rounded-xl text-xs transition-colors shadow-md cursor-pointer"
+                        >
+                          <Stethoscope className="h-4 w-4 shrink-0 text-terracotta" />
+                          <span>Ask AI Doctor</span>
+                        </button>
+                      </div>
                       
                       <div className="p-3 bg-yellow-50 border border-yellow-100 text-yellow-800 text-center text-xs rounded-xl flex items-center justify-center gap-1.5">
                         <Info className="h-4 w-4" />

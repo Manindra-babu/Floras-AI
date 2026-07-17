@@ -3,3 +3,9 @@
   to = "https://my-api.plantnet.org/:splat"
   status = 200
   force = true
+
+[[redirects]]
+  from = "/api/chat"
+  to = "/.netlify/functions/chat"
+  status = 200
+  force = true

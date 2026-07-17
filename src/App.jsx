@@ -10,11 +10,13 @@ import Dashboard from './components/Dashboard'
 import MyAdoptedTrees from './components/MyAdoptedTrees'
 import Leaderboard from './components/Leaderboard'
 import Auth from './components/Auth'
+import TreeDoctor from './components/TreeDoctor'
 import { AlertCircle, HelpCircle, ShieldAlert } from 'lucide-react'
 
 function AppContent() {
   const [activePage, setActivePage] = useState('landing')
   const [selectedTreeId, setSelectedTreeId] = useState(null)
+  const [chatContext, setChatContext] = useState(null)
   const { user } = useAuth()
 
   // Render current active page
@@ -23,7 +25,7 @@ function AppContent() {
       case 'landing':
         return <LandingPage setActivePage={setActivePage} />
       case 'map':
-        return <LiveMap selectedTreeId={selectedTreeId} setSelectedTreeId={setSelectedTreeId} />
+        return <LiveMap selectedTreeId={selectedTreeId} setSelectedTreeId={setSelectedTreeId} setChatContext={setChatContext} />
       case 'report':
         return <ReportTree setActivePage={setActivePage} />
       case 'dashboard':
@@ -62,6 +64,9 @@ function AppContent() {
 
       {/* Main Footer */}
       <Footer />
+
+      {/* Floating Tree Doctor AI Chatbot */}
+      <TreeDoctor chatContext={chatContext} setChatContext={setChatContext} />
     </div>
   )
 }
