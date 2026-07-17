@@ -23,7 +23,8 @@ import {
   ShieldAlert,
   Check,
   Eye,
-  Stethoscope
+  Stethoscope,
+  Loader2
 } from 'lucide-react'
 import ImageSlider from './ImageSlider'
 import ShareCard from './ShareCard'
