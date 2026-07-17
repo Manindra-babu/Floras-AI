@@ -21,15 +21,19 @@ import {
   Award,
   ChevronRight,
   TrendingUp,
-  MapPin
+  MapPin,
+  FileText,
+  CheckCircle
 } from 'lucide-react'
+import ExportReport from './ExportReport'
 
 export default function Dashboard({ setActivePage, setSelectedTreeId }) {
-  const [stats, setStats] = useState({ totalTrees: 0, sickTrees: 0, cutDownTrees: 0, alertsSent: 0 })
+  const [stats, setStats] = useState({ totalTrees: 0, sickTrees: 0, cutDownTrees: 0, alertsSent: 0, verifiedPercentage: 0 })
   const [trees, setTrees] = useState([])
   const [sickTreesList, setSickTreesList] = useState([])
   const [areaStats, setAreaStats] = useState([])
   const [loading, setLoading] = useState(true)
+  const [showExportModal, setShowExportModal] = useState(false)
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -111,16 +115,24 @@ export default function Dashboard({ setActivePage, setSelectedTreeId }) {
             Aggregate data representing collective community tree preservation logs.
           </p>
         </div>
-        <button
-          onClick={() => setActivePage('map')}
-          className="flex items-center gap-2 bg-forest text-offwhite hover:bg-forest-light text-xs font-semibold px-4 py-2.5 rounded-xl transition-all shadow-sm self-start cursor-pointer"
-        >
-          <Map className="h-4 w-4 text-terracotta" /> View Live Map
-        </button>
+        <div className="flex flex-wrap items-center gap-3 self-start">
+          <button
+            onClick={() => setShowExportModal(true)}
+            className="flex items-center gap-2 bg-offwhite border border-offwhite-dark hover:bg-offwhite-dark/85 text-forest text-xs font-semibold px-4 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer"
+          >
+            <FileText className="h-4 w-4 text-terracotta" /> Export Civic Report
+          </button>
+          <button
+            onClick={() => setActivePage('map')}
+            className="flex items-center gap-2 bg-forest text-offwhite hover:bg-forest-light text-xs font-semibold px-4 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer"
+          >
+            <Map className="h-4 w-4 text-terracotta" /> View Live Map
+          </button>
+        </div>
       </div>
 
       {/* 1. Stat Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white border border-offwhite-dark p-5 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between text-forest mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-charcoal/50">Total Tracked</span>
@@ -155,6 +167,17 @@ export default function Dashboard({ setActivePage, setSelectedTreeId }) {
           </div>
           <span className="block text-3xl font-serif font-bold text-forest">{stats.alertsSent}</span>
           <span className="text-[10px] text-charcoal/50 mt-1 block">Official reports dispatched</span>
+        </div>
+
+        <div className="bg-white border border-offwhite-dark p-5 rounded-3xl shadow-sm hover:shadow-md transition-shadow col-span-2 lg:col-span-1">
+          <div className="flex items-center justify-between text-blue-600 mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-charcoal/50">Verified Rate</span>
+            <CheckCircle className="h-5 w-5 text-blue-500" />
+          </div>
+          <span className="block text-3xl font-serif font-bold text-blue-600">
+            {stats.verifiedPercentage !== undefined ? stats.verifiedPercentage : 0}%
+          </span>
+          <span className="text-[10px] text-charcoal/50 mt-1 block">Confirmed by citizens</span>
         </div>
       </div>
 
@@ -328,6 +351,32 @@ export default function Dashboard({ setActivePage, setSelectedTreeId }) {
         </div>
 
       </div>
+
+      {/* Leaderboard Callout Banner */}
+      <div className="bg-forest text-offwhite rounded-3xl p-6 shadow-sm border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="bg-white/10 p-2.5 rounded-2xl">
+            <Award className="h-6 w-6 text-terracotta" />
+          </div>
+          <div>
+            <h4 className="font-serif font-bold text-lg">Guardian Leaderboard is Live!</h4>
+            <p className="text-xs text-offwhite/85 mt-1 leading-relaxed">
+              Earn impact points by reporting trees, updating health conditions, and adopting specimens.
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => setActivePage('leaderboard')}
+          className="bg-white text-forest hover:bg-offwhite-dark text-xs font-bold px-4.5 py-2.5 rounded-xl transition-all shadow-sm shrink-0 cursor-pointer"
+        >
+          View Rankings
+        </button>
+      </div>
+
+      {/* Export Report Modal */}
+      {showExportModal && (
+        <ExportReport onClose={() => setShowExportModal(false)} />
+      )}
 
     </div>
   )

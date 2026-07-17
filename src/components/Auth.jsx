@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { LogIn, UserPlus, Lock, Mail, Eye, EyeOff, Loader2, AlertCircle, Info } from 'lucide-react'
+import { LogIn, UserPlus, Lock, Mail, Eye, EyeOff, Loader2, AlertCircle, Info, User } from 'lucide-react'
 
 export default function Auth({ setActivePage }) {
   const { signIn, signUp, isMockAuth } = useAuth()
@@ -8,6 +8,7 @@ export default function Auth({ setActivePage }) {
   
   // Fields
   const [email, setEmail] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   
@@ -26,6 +27,11 @@ export default function Auth({ setActivePage }) {
       return
     }
 
+    if (isSignUp && !displayName.trim()) {
+      setError('Please enter a display name.')
+      return
+    }
+
     if (password.length < 6) {
       setError('Password must be at least 6 characters long.')
       return
@@ -35,7 +41,7 @@ export default function Auth({ setActivePage }) {
     try {
       if (isSignUp) {
         // Sign Up
-        const { data, error: signupErr } = await signUp(email, password)
+        const { data, error: signupErr } = await signUp(email, password, displayName)
         if (signupErr) {
           setError(signupErr.message)
         } else {
@@ -137,6 +143,28 @@ export default function Auth({ setActivePage }) {
 
         {/* Auth Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Display Name (Only for Registration) */}
+          {isSignUp && (
+            <div>
+              <label className="block text-xs font-bold text-forest uppercase tracking-wide mb-2">
+                Display Name / Name
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-charcoal/40">
+                  <User className="h-4 w-4" />
+                </span>
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="e.g. Oak Guardian"
+                  className="w-full bg-offwhite border border-offwhite-dark rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-forest text-charcoal"
+                  disabled={loading}
+                />
+              </div>
+            </div>
+          )}
+
           {/* Email */}
           <div>
             <label className="block text-xs font-bold text-forest uppercase tracking-wide mb-2">

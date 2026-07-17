@@ -47,6 +47,14 @@ export default function Header({ activePage, setActivePage }) {
             >
               Community Dashboard
             </button>
+            <button
+              onClick={() => handleNav('leaderboard')}
+              className={`hover:text-terracotta transition-colors py-2 text-sm font-medium ${
+                activePage === 'leaderboard' ? 'text-terracotta border-b-2 border-terracotta' : 'text-offwhite/90'
+              }`}
+            >
+              Leaderboard
+            </button>
             {user && (
               <button
                 onClick={() => handleNav('adopted')}
@@ -136,6 +144,14 @@ export default function Header({ activePage, setActivePage }) {
             }`}
           >
             Community Dashboard
+          </button>
+          <button
+            onClick={() => handleNav('leaderboard')}
+            className={`block w-full text-left px-3 py-2 rounded-lg text-base font-medium ${
+              activePage === 'leaderboard' ? 'bg-forest-light text-terracotta' : 'hover:bg-forest-light'
+            }`}
+          >
+            Leaderboard
           </button>
           {user && (
             <button

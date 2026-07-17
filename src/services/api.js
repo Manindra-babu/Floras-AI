@@ -187,12 +187,52 @@ const getMockDB = () => {
     const newDb = {
       trees: INITIAL_MOCK_TREES,
       status_history: INITIAL_MOCK_HISTORY,
-      adoptions: INITIAL_MOCK_ADOPTIONS
+      adoptions: INITIAL_MOCK_ADOPTIONS,
+      confirmations: [
+        { id: 'mock-conf-1', tree_id: 'mock-tree-1', status_confirmed: 'healthy', confirmed_by: 'mock-user-user1', created_at: new Date().toISOString() },
+        { id: 'mock-conf-2', tree_id: 'mock-tree-1', status_confirmed: 'healthy', confirmed_by: 'mock-user-user2', created_at: new Date().toISOString() }
+      ],
+      profiles: [
+        { id: 'mock-user-admin', display_name: 'City Canopy Admin', created_at: new Date().toISOString() },
+        { id: 'mock-user-user1', display_name: 'Eco Stewardship Team', created_at: new Date().toISOString() },
+        { id: 'mock-user-user2', display_name: 'Canopy Patrol Officer', created_at: new Date().toISOString() }
+      ]
     }
+    // Set tree-1 to verified
+    newDb.trees[0].verified = true
     localStorage.setItem('tree_census_db', JSON.stringify(newDb))
     return newDb
   }
-  return JSON.parse(db)
+  
+  const parsed = JSON.parse(db)
+  let updated = false
+  if (!parsed.confirmations) {
+    parsed.confirmations = [
+      { id: 'mock-conf-1', tree_id: 'mock-tree-1', status_confirmed: 'healthy', confirmed_by: 'mock-user-user1', created_at: new Date().toISOString() },
+      { id: 'mock-conf-2', tree_id: 'mock-tree-1', status_confirmed: 'healthy', confirmed_by: 'mock-user-user2', created_at: new Date().toISOString() }
+    ]
+    parsed.trees[0].verified = true
+    updated = true
+  }
+  if (!parsed.profiles) {
+    parsed.profiles = [
+      { id: 'mock-user-admin', display_name: 'City Canopy Admin', created_at: new Date().toISOString() },
+      { id: 'mock-user-user1', display_name: 'Eco Stewardship Team', created_at: new Date().toISOString() },
+      { id: 'mock-user-user2', display_name: 'Canopy Patrol Officer', created_at: new Date().toISOString() }
+    ]
+    updated = true
+  }
+  // Ensure default trees have verified property
+  parsed.trees.forEach(t => {
+    if (t.verified === undefined) {
+      t.verified = t.id === 'mock-tree-1' ? true : false
+      updated = true
+    }
+  })
+  if (updated) {
+    localStorage.setItem('tree_census_db', JSON.stringify(parsed))
+  }
+  return parsed
 }
 
 const saveMockDB = (db) => {
@@ -316,19 +356,19 @@ export const api = {
       const db = getMockDB()
       const treesCount = db.trees.length
       
-      // Calculate alerts sent: count trees that have been updated to sick or cut_down
-      // plus status histories that represent status changes. Let's make it a nice realistic counter
       const sickCount = db.trees.filter(t => t.current_status === 'sick').length
       const cutCount = db.trees.filter(t => t.current_status === 'cut_down').length
       
-      // Simulate historical complaint count
       const complaintsSent = db.status_history.filter(h => h.status === 'sick' || h.status === 'cut_down').length + 8 // offset for realistic stats
+      const verifiedCount = db.trees.filter(t => t.verified).length
+      const verifiedPct = treesCount > 0 ? Math.round((verifiedCount / treesCount) * 100) : 0
 
       return {
         totalTrees: treesCount,
         sickTrees: sickCount,
         cutDownTrees: cutCount,
-        alertsSent: complaintsSent
+        alertsSent: complaintsSent,
+        verifiedPercentage: verifiedPct
       }
     }
 
@@ -348,21 +388,28 @@ export const api = {
         .select('*', { count: 'exact', head: true })
         .eq('current_status', 'cut_down')
 
-      // Count total status history updates of sick or cut down
       const { count: alertsSent } = await supabase
         .from('tree_status_history')
         .select('*', { count: 'exact', head: true })
         .in('status', ['sick', 'cut_down'])
 
+      const { count: verifiedTrees } = await supabase
+        .from('trees')
+        .select('*', { count: 'exact', head: true })
+        .eq('verified', true)
+
+      const verifiedPct = totalTrees > 0 ? Math.round(((verifiedTrees || 0) / totalTrees) * 100) : 0
+
       return {
         totalTrees: totalTrees || 0,
         sickTrees: sickTrees || 0,
         cutDownTrees: cutDownTrees || 0,
-        alertsSent: (alertsSent || 0) + 8 // demo offset
+        alertsSent: (alertsSent || 0) + 8, // demo offset
+        verifiedPercentage: verifiedPct
       }
     } catch (e) {
       console.error('Error fetching Supabase stats:', e)
-      return { totalTrees: 0, sickTrees: 0, cutDownTrees: 0, alertsSent: 0 }
+      return { totalTrees: 0, sickTrees: 0, cutDownTrees: 0, alertsSent: 0, verifiedPercentage: 0 }
     }
   },
 
@@ -399,11 +446,13 @@ export const api = {
         .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
 
       const adoptions = db.adoptions.filter(a => a.tree_id === treeId)
+      const confirmations = db.confirmations.filter(c => c.tree_id === treeId)
 
       return {
         tree,
         history,
-        adoptions
+        adoptions,
+        confirmations
       }
     }
 
@@ -431,10 +480,18 @@ export const api = {
 
       if (adoptErr) throw adoptErr
 
+      const { data: confirmations, error: confErr } = await supabase
+        .from('tree_confirmations')
+        .select('*')
+        .eq('tree_id', treeId)
+
+      if (confErr) throw confErr
+
       return {
         tree,
         history: history || [],
-        adoptions: adoptions || []
+        adoptions: adoptions || [],
+        confirmations: confirmations || []
       }
     } catch (e) {
       console.error('Error fetching tree details:', e)
@@ -721,6 +778,304 @@ export const api = {
     } catch (e) {
       console.error('Error fetching adopted trees:', e)
       return []
+    }
+  },
+
+  // 11. CONFIRM TREE STATUS (VERIFICATION)
+  confirmTreeStatus: async (treeId, status, userId) => {
+    if (isMockMode) {
+      const db = getMockDB()
+      // Check if already confirmed
+      const exists = db.confirmations.some(
+        c => c.tree_id === treeId && c.status_confirmed === status && c.confirmed_by === userId
+      )
+      if (exists) throw new Error('You have already confirmed this status.')
+
+      const newConf = {
+        id: `conf-${Math.random().toString(36).substring(2, 9)}`,
+        tree_id: treeId,
+        status_confirmed: status,
+        confirmed_by: userId,
+        created_at: new Date().toISOString()
+      }
+      db.confirmations.push(newConf)
+
+      // Count confirmations for current status
+      const tree = db.trees.find(t => t.id === treeId)
+      if (tree && tree.current_status === status) {
+        const confCount = db.confirmations.filter(
+          c => c.tree_id === treeId && c.status_confirmed === status
+        ).length
+        if (confCount >= 2) {
+          tree.verified = true
+        }
+      }
+      saveMockDB(db)
+      return newConf
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('tree_confirmations')
+        .insert([{ tree_id: treeId, status_confirmed: status, confirmed_by: userId }])
+        .select()
+        .single()
+
+      if (error) {
+        if (error.code === '23505') throw new Error('You have already confirmed this status.')
+        throw error
+      }
+
+      // Check verification count
+      const { count, error: countErr } = await supabase
+        .from('tree_confirmations')
+        .select('*', { count: 'exact', head: true })
+        .eq('tree_id', treeId)
+        .eq('status_confirmed', status)
+
+      if (countErr) throw countErr
+
+      if (count && count >= 2) {
+        await supabase
+          .from('trees')
+          .update({ verified: true })
+          .eq('id', treeId)
+      }
+
+      return data
+    } catch (e) {
+      console.error('Error confirming status:', e)
+      throw e
+    }
+  },
+
+  // 12. GET LEADERBOARD (MONTHLY & ALL TIME)
+  getLeaderboard: async (period) => {
+    if (isMockMode) {
+      const db = getMockDB()
+      const now = new Date()
+      const cutoff = period === 'month' ? new Date(now.setDate(now.getDate() - 30)) : null
+
+      const leaderboard = db.profiles.map(p => {
+        let userTrees = db.trees.filter(t => t.reported_by === p.id)
+        let userUpdates = db.status_history.filter(h => h.updated_by === p.id)
+        let userAdoptions = db.adoptions.filter(a => a.user_id === p.id)
+
+        if (cutoff) {
+          userTrees = userTrees.filter(t => new Date(t.created_at) >= cutoff)
+          userUpdates = userUpdates.filter(h => new Date(h.created_at) >= cutoff)
+          userAdoptions = userAdoptions.filter(a => new Date(a.created_at) >= cutoff)
+        }
+
+        const reports = userTrees.length
+        const statusUpdates = userUpdates.length
+        const adoptionsCount = userAdoptions.length
+        const impactScore = (reports * 3) + (statusUpdates * 2) + (adoptionsCount * 1)
+
+        let topContribution = 'None'
+        if (reports >= statusUpdates && reports >= adoptionsCount && reports > 0) topContribution = 'Reporter'
+        else if (statusUpdates >= reports && statusUpdates >= adoptionsCount && statusUpdates > 0) topContribution = 'Updater'
+        else if (adoptionsCount > 0) topContribution = 'Adopter'
+
+        return {
+          userId: p.id,
+          displayName: p.display_name,
+          reports,
+          statusUpdates,
+          adoptions: adoptionsCount,
+          impactScore,
+          topContribution
+        }
+      })
+
+      return leaderboard.sort((a, b) => b.impactScore - a.impactScore)
+    }
+
+    try {
+      const { data: profiles, error: pErr } = await supabase.from('profiles').select('*')
+      if (pErr) throw pErr
+
+      const { data: trees, error: tErr } = await supabase.from('trees').select('reported_by, created_at')
+      if (tErr) throw tErr
+
+      const { data: history, error: hErr } = await supabase.from('tree_status_history').select('updated_by, created_at')
+      if (hErr) throw hErr
+
+      const { data: adoptions, error: aErr } = await supabase.from('tree_adoptions').select('user_id, created_at')
+      if (aErr) throw aErr
+
+      const now = new Date()
+      const cutoff = period === 'month' ? new Date(now.setDate(now.getDate() - 30)) : null
+
+      const leaderboard = (profiles || []).map(p => {
+        let uTrees = (trees || []).filter(t => t.reported_by === p.id)
+        let uUpdates = (history || []).filter(h => h.updated_by === p.id)
+        let uAdoptions = (adoptions || []).filter(a => a.user_id === p.id)
+
+        if (cutoff) {
+          uTrees = uTrees.filter(t => new Date(t.created_at) >= cutoff)
+          uUpdates = uUpdates.filter(h => new Date(h.created_at) >= cutoff)
+          uAdoptions = uAdoptions.filter(a => new Date(a.created_at) >= cutoff)
+        }
+
+        const reports = uTrees.length
+        const statusUpdates = uUpdates.length
+        const adoptionsCount = uAdoptions.length
+        const impactScore = (reports * 3) + (statusUpdates * 2) + (adoptionsCount * 1)
+
+        let topContribution = 'None'
+        if (reports >= statusUpdates && reports >= adoptionsCount && reports > 0) topContribution = 'Reporter'
+        else if (statusUpdates >= reports && statusUpdates >= adoptionsCount && statusUpdates > 0) topContribution = 'Updater'
+        else if (adoptionsCount > 0) topContribution = 'Adopter'
+
+        return {
+          userId: p.id,
+          displayName: p.display_name,
+          reports,
+          statusUpdates,
+          adoptions: adoptionsCount,
+          impactScore,
+          topContribution
+        }
+      })
+
+      return leaderboard.sort((a, b) => b.impactScore - a.impactScore)
+    } catch (e) {
+      console.error('Error calculating leaderboard:', e)
+      return []
+    }
+  },
+
+  // 13. GET REPORT DATA FOR AUTHORITIES
+  getAuthorityReportData: async (areaText, startDate, endDate, statusFilter) => {
+    if (isMockMode) {
+      const db = getMockDB()
+      let filtered = [...db.trees]
+
+      if (areaText) {
+        const term = areaText.toLowerCase()
+        filtered = filtered.filter(t => t.note && t.note.toLowerCase().includes(term))
+      }
+
+      if (startDate) {
+        const start = new Date(startDate)
+        filtered = filtered.filter(t => new Date(t.created_at) >= start)
+      }
+
+      if (endDate) {
+        const end = new Date(endDate)
+        end.setDate(end.getDate() + 1)
+        filtered = filtered.filter(t => new Date(t.created_at) <= end)
+      }
+
+      if (statusFilter && statusFilter.length > 0) {
+        filtered = filtered.filter(t => statusFilter.includes(t.current_status))
+      } else {
+        filtered = filtered.filter(t => t.current_status === 'sick' || t.current_status === 'cut_down')
+      }
+
+      return filtered.map(t => {
+        const reporterProfile = db.profiles.find(p => p.id === t.reported_by)
+        const reporterName = reporterProfile ? reporterProfile.display_name : 'Citizen Scientist'
+
+        const treeHistory = db.status_history
+          .filter(h => h.tree_id === t.id)
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
+        const latestLog = treeHistory[0]
+
+        return {
+          ...t,
+          reported_by_name: reporterName,
+          last_updated_at: latestLog ? latestLog.created_at : t.created_at,
+          latest_note: latestLog ? latestLog.note : t.note
+        }
+      })
+    }
+
+    try {
+      let query = supabase.from('trees').select('*')
+
+      if (statusFilter && statusFilter.length > 0) {
+        query = query.in('current_status', statusFilter)
+      } else {
+        query = query.in('current_status', ['sick', 'cut_down'])
+      }
+
+      if (startDate) {
+        query = query.gte('created_at', startDate)
+      }
+      if (endDate) {
+        const end = new Date(endDate)
+        end.setDate(end.getDate() + 1)
+        query = query.lte('created_at', end.toISOString())
+      }
+
+      const { data: trees, error } = await query
+      if (error) throw error
+
+      let result = trees || []
+
+      if (areaText) {
+        const term = areaText.toLowerCase()
+        result = result.filter(
+          t => (t.note && t.note.toLowerCase().includes(term)) || (t.species && t.species.toLowerCase().includes(term))
+        )
+      }
+
+      const { data: profiles } = await supabase.from('profiles').select('*')
+      const profileMap = (profiles || []).reduce((acc, p) => ({ ...acc, [p.id]: p.display_name }), {})
+
+      const finalTrees = await Promise.all(
+        result.map(async t => {
+          const { data: history } = await supabase
+            .from('tree_status_history')
+            .select('*')
+            .eq('tree_id', t.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+
+          const latestLog = history && history.length > 0 ? history[0] : null
+
+          return {
+            ...t,
+            reported_by_name: profileMap[t.reported_by] || 'Citizen Scientist',
+            last_updated_at: latestLog ? latestLog.created_at : t.created_at,
+            latest_note: latestLog ? latestLog.note : t.note
+          }
+        })
+      )
+
+      return finalTrees
+    } catch (e) {
+      console.error('Error fetching authority report data:', e)
+      return []
+    }
+  },
+
+  // 14. SAVE USER PROFILE
+  saveUserProfile: async (userId, displayName) => {
+    if (isMockMode) {
+      const db = getMockDB()
+      const exists = db.profiles.some(p => p.id === userId)
+      if (!exists) {
+        db.profiles.push({
+          id: userId,
+          display_name: displayName,
+          created_at: new Date().toISOString()
+        })
+        saveMockDB(db)
+      }
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .insert([{ id: userId, display_name: displayName }])
+      if (error) throw error
+    } catch (e) {
+      console.error('Error saving user profile:', e)
     }
   }
 }

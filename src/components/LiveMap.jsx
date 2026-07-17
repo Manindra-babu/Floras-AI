@@ -18,8 +18,14 @@ import {
   Award,
   Sparkles,
   Info,
-  Clock
+  Clock,
+  Share2,
+  ShieldAlert,
+  Check,
+  Eye
 } from 'lucide-react'
+import ImageSlider from './ImageSlider'
+import ShareCard from './ShareCard'
 
 export default function LiveMap({ selectedTreeId, setSelectedTreeId }) {
   const { user } = useAuth()
@@ -32,6 +38,14 @@ export default function LiveMap({ selectedTreeId, setSelectedTreeId }) {
   // Selected Tree Details
   const [selectedTreeDetails, setSelectedTreeDetails] = useState(null)
   const [loadingDetails, setLoadingDetails] = useState(false)
+  
+  // Add-on States
+  const [compareMode, setCompareMode] = useState(false)
+  const [beforePhotoIdx, setBeforePhotoIdx] = useState(0)
+  const [afterPhotoIdx, setAfterPhotoIdx] = useState(0)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [confirmLoading, setConfirmLoading] = useState(false)
+  const [confirmError, setConfirmError] = useState('')
   
   // Filter States
   const [statusFilter, setStatusFilter] = useState('all')
@@ -89,12 +103,42 @@ export default function LiveMap({ selectedTreeId, setSelectedTreeId }) {
 
   // 2. Fetch details when selectedTreeId changes
   useEffect(() => {
+    setCompareMode(false)
+    setBeforePhotoIdx(0)
+    setAfterPhotoIdx(0)
+    setConfirmError('')
     if (selectedTreeId) {
       loadTreeDetails(selectedTreeId)
     } else {
       setSelectedTreeDetails(null)
     }
   }, [selectedTreeId])
+
+  // Initialize comparison slider indices when details load
+  useEffect(() => {
+    if (selectedTreeDetails?.history) {
+      const photoHistory = selectedTreeDetails.history.filter(h => h.photo_url)
+      if (photoHistory.length >= 2) {
+        setBeforePhotoIdx(0)
+        setAfterPhotoIdx(photoHistory.length - 1)
+      }
+    }
+  }, [selectedTreeDetails])
+
+  const handleConfirmStatus = async () => {
+    if (!user || !details) return
+    setConfirmLoading(true)
+    setConfirmError('')
+    try {
+      await api.confirmTreeStatus(details.id, details.current_status, user.id)
+      await loadTreeDetails(details.id)
+      await loadTrees()
+    } catch (err) {
+      setConfirmError(err.message || 'Error confirming status.')
+    } finally {
+      setConfirmLoading(false)
+    }
+  }
 
   // 3. Apply Filters
   useEffect(() => {
@@ -218,8 +262,10 @@ export default function LiveMap({ selectedTreeId, setSelectedTreeId }) {
         svgPath = '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>' // Trash/Removed Icon
       }
 
+      const ringClass = tree.verified ? 'ring-2 ring-amber-400 ring-offset-1' : ''
+
       // Generate HTML string for custom Pin drop
-      const pinHtml = `<div class="w-8 h-8 rounded-full ${colorClass} ${pulseClass} border-2 border-offwhite flex items-center justify-center text-offwhite shadow-lg animate-pin-drop">
+      const pinHtml = `<div class="w-8 h-8 rounded-full ${colorClass} ${pulseClass} ${ringClass} border-2 border-offwhite flex items-center justify-center text-offwhite shadow-lg animate-pin-drop">
                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide">${svgPath}</svg>
                        </div>`
 
@@ -283,7 +329,17 @@ export default function LiveMap({ selectedTreeId, setSelectedTreeId }) {
   const details = selectedTreeDetails?.tree
   const historyList = selectedTreeDetails?.history || []
   const adoptions = selectedTreeDetails?.adoptions || []
+  const confirmations = selectedTreeDetails?.confirmations || []
+  
   const userAdopted = user && adoptions.some(a => a.user_id === user.id)
+  const userConfirmed = user && confirmations.some(c => c.confirmed_by === user.id && c.status_confirmed === details?.current_status)
+  
+  const isReporterOrUpdater = user && details && (
+    details.reported_by === user.id || 
+    (historyList.length > 0 && historyList[historyList.length - 1].updated_by === user.id)
+  )
+
+  const photoHistory = historyList.filter(h => h.photo_url)
 
   return (
     <div 
@@ -372,8 +428,13 @@ export default function LiveMap({ selectedTreeId, setSelectedTreeId }) {
               <span className="block text-[10px] text-offwhite/70 uppercase tracking-wide font-medium leading-none">
                 Tree Census Log Details
               </span>
-              <h3 className="font-serif font-semibold text-base truncate mt-1 max-w-[240px]">
+              <h3 className="font-serif font-semibold text-base truncate mt-1 max-w-[240px] flex items-center gap-1.5">
                 {details?.species?.split(' (')[0] || 'Loading...'}
+                {details?.verified && (
+                  <span className="inline-flex items-center justify-center bg-blue-100 text-blue-800 text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm border border-blue-200" title="Verified specimen">
+                    ✓ Verified
+                  </span>
+                )}
               </h3>
             </div>
             <button 
@@ -394,27 +455,101 @@ export default function LiveMap({ selectedTreeId, setSelectedTreeId }) {
             ) : details ? (
               <>
                 {/* Photo Carousel / Main Image */}
-                <div className="relative rounded-2xl overflow-hidden border border-offwhite-dark aspect-video bg-offwhite shadow-sm shrink-0">
-                  <img 
-                    src={details.photo_url} 
-                    alt={details.species} 
-                    className="w-full h-full object-cover"
-                  />
-                  
-                  {/* Floating Status Banner */}
-                  <span className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border shadow-md flex items-center gap-1 ${
-                    details.current_status === 'healthy' 
-                      ? 'bg-forest text-offwhite border-offwhite/20' 
-                      : details.current_status === 'sick'
-                        ? 'bg-yellow-500 text-charcoal border-white/20'
-                        : 'bg-red-600 text-offwhite border-offwhite/20'
-                  }`}>
-                    {details.current_status === 'healthy' && <Heart className="h-3 w-3 fill-offwhite" />}
-                    {details.current_status === 'sick' && <AlertTriangle className="h-3 w-3" />}
-                    {details.current_status === 'cut_down' && <Trash2 className="h-3 w-3" />}
-                    {details.current_status.replace('_', ' ')}
-                  </span>
-                </div>
+                {/* Photo Comparison / Carousel / Main Image */}
+                {compareMode && photoHistory.length >= 2 ? (
+                  <div className="shrink-0">
+                    <ImageSlider 
+                      beforeImage={photoHistory[beforePhotoIdx].photo_url}
+                      beforeDate={new Date(photoHistory[beforePhotoIdx].created_at).toLocaleDateString()}
+                      beforeStatus={photoHistory[beforePhotoIdx].status}
+                      afterImage={photoHistory[afterPhotoIdx].photo_url}
+                      afterDate={new Date(photoHistory[afterPhotoIdx].created_at).toLocaleDateString()}
+                      afterStatus={photoHistory[afterPhotoIdx].status}
+                    />
+
+                    {/* Thumbnail selectors for choosing before/after */}
+                    {photoHistory.length > 2 && (
+                      <div className="mt-3 space-y-2 bg-offwhite p-3 rounded-2xl border border-offwhite-dark">
+                        <div>
+                          <span className="block text-[8px] font-bold text-charcoal/50 uppercase tracking-wider mb-1">Select "Before" Photo:</span>
+                          <div className="flex gap-1.5 overflow-x-auto pb-1">
+                            {photoHistory.map((item, idx) => (
+                              <button
+                                key={item.id}
+                                disabled={idx >= afterPhotoIdx}
+                                onClick={() => setBeforePhotoIdx(idx)}
+                                className={`relative h-10 w-16 rounded-lg overflow-hidden border-2 shrink-0 transition-all ${
+                                  idx >= afterPhotoIdx ? 'opacity-30 cursor-not-allowed border-transparent' :
+                                  beforePhotoIdx === idx ? 'border-forest ring-1 ring-forest/30' : 'border-offwhite-dark hover:border-charcoal/30'
+                                }`}
+                              >
+                                <img src={item.photo_url} className="w-full h-full object-cover" />
+                                <span className="absolute inset-0 bg-black/30 flex items-center justify-center text-[7px] text-white font-bold">
+                                  {new Date(item.created_at).toLocaleDateString()}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <span className="block text-[8px] font-bold text-charcoal/50 uppercase tracking-wider mb-1">Select "After" Photo:</span>
+                          <div className="flex gap-1.5 overflow-x-auto pb-1">
+                            {photoHistory.map((item, idx) => (
+                              <button
+                                key={item.id}
+                                disabled={idx <= beforePhotoIdx}
+                                onClick={() => setAfterPhotoIdx(idx)}
+                                className={`relative h-10 w-16 rounded-lg overflow-hidden border-2 shrink-0 transition-all ${
+                                  idx <= beforePhotoIdx ? 'opacity-30 cursor-not-allowed border-transparent' :
+                                  afterPhotoIdx === idx ? 'border-terracotta ring-1 ring-terracotta/30' : 'border-offwhite-dark hover:border-charcoal/30'
+                                }`}
+                              >
+                                <img src={item.photo_url} className="w-full h-full object-cover" />
+                                <span className="absolute inset-0 bg-black/30 flex items-center justify-center text-[7px] text-white font-bold">
+                                  {new Date(item.created_at).toLocaleDateString()}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="relative rounded-2xl overflow-hidden border border-offwhite-dark aspect-video bg-offwhite shadow-sm shrink-0">
+                    <img 
+                      src={details.photo_url} 
+                      alt={details.species} 
+                      className="w-full h-full object-cover animate-fade-in"
+                    />
+                    
+                    {/* Floating Status Banner */}
+                    <span className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border shadow-md flex items-center gap-1 ${
+                      details.current_status === 'healthy' 
+                        ? 'bg-forest text-offwhite border-offwhite/20' 
+                        : details.current_status === 'sick'
+                          ? 'bg-yellow-500 text-charcoal border-white/20'
+                          : 'bg-red-600 text-offwhite border-offwhite/20'
+                    }`}>
+                      {details.current_status === 'healthy' && <Heart className="h-3 w-3 fill-offwhite" />}
+                      {details.current_status === 'sick' && <AlertTriangle className="h-3 w-3" />}
+                      {details.current_status === 'cut_down' && <Trash2 className="h-3 w-3" />}
+                      {details.current_status.replace('_', ' ')}
+                    </span>
+                  </div>
+                )}
+
+                {/* Compare toggle button */}
+                {photoHistory.length >= 2 && (
+                  <button
+                    onClick={() => setCompareMode(!compareMode)}
+                    className="w-full py-2 bg-forest/5 hover:bg-forest/10 border border-forest/10 rounded-xl text-xs font-bold text-forest flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Eye className="h-4 w-4 text-terracotta" />
+                    <span>{compareMode ? 'Show Current Photo' : 'Compare Photos Over Time'}</span>
+                  </button>
+                )}
 
                 {/* Details Block */}
                 <div className="space-y-2">
@@ -439,6 +574,63 @@ export default function LiveMap({ selectedTreeId, setSelectedTreeId }) {
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* Verification / Confirmation Widget */}
+                <div className="bg-blue-50/40 border border-blue-100/50 p-4 rounded-2xl space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <ShieldAlert className="h-4.5 w-4.5 text-blue-600" />
+                      <span className="font-serif font-bold text-xs text-blue-900">Verification Status</span>
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded-full border border-blue-200">
+                      {details.verified ? 'Verified ✓' : `${confirmations.length}/2 Confirmations`}
+                    </span>
+                  </div>
+
+                  <p className="text-[10px] text-charcoal/70 leading-normal">
+                    {details.verified 
+                      ? 'This tree status is fully verified by multiple independent citizen science reports.'
+                      : 'This report needs at least 2 independent confirmations from other users to be marked as verified.'}
+                  </p>
+
+                  {user ? (
+                    isReporterOrUpdater ? (
+                      <span className="block text-[9px] text-charcoal/50 italic text-center">
+                        You submitted this status report, so you cannot verify it.
+                      </span>
+                    ) : userConfirmed ? (
+                      <button
+                        disabled
+                        className="w-full flex items-center justify-center gap-1 bg-green-50 border border-green-200 text-green-700 font-semibold py-2 rounded-xl text-xs"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                        <span>You confirmed this status</span>
+                      </button>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <button
+                          onClick={handleConfirmStatus}
+                          disabled={confirmLoading}
+                          className="w-full flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-offwhite font-bold py-2 rounded-xl text-xs transition-colors shadow-sm cursor-pointer disabled:opacity-50"
+                        >
+                          {confirmLoading ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Check className="h-3.5 w-3.5" />
+                          )}
+                          <span>Confirm This Status</span>
+                        </button>
+                        {confirmError && (
+                          <span className="block text-[9px] text-red-600 text-center font-semibold">{confirmError}</span>
+                        )}
+                      </div>
+                    )
+                  ) : (
+                    <span className="block text-[9px] text-charcoal/50 italic text-center">
+                      Sign in to confirm this tree's status.
+                    </span>
+                  )}
                 </div>
 
                 {/* Adoption Widget */}
@@ -506,17 +698,37 @@ export default function LiveMap({ selectedTreeId, setSelectedTreeId }) {
                 {/* Action CTA Buttons */}
                 <div className="pt-2 space-y-3 shrink-0">
                   {user ? (
-                    <button
-                      onClick={() => setShowUpdateModal(true)}
-                      className="w-full flex items-center justify-center gap-2 bg-offwhite border border-offwhite-dark hover:bg-offwhite-dark/85 text-forest font-semibold py-3 rounded-xl text-sm transition-colors cursor-pointer"
-                    >
-                      <Camera className="h-4 w-4 text-terracotta" />
-                      <span>Update Tree Status</span>
-                    </button>
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => setShowUpdateModal(true)}
+                        className="w-full flex items-center justify-center gap-2 bg-offwhite border border-offwhite-dark hover:bg-offwhite-dark/85 text-forest font-semibold py-3 rounded-xl text-sm transition-colors cursor-pointer"
+                      >
+                        <Camera className="h-4 w-4 text-terracotta" />
+                        <span>Update Tree Status</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => setShowShareModal(true)}
+                        className="w-full flex items-center justify-center gap-2 bg-forest hover:bg-forest-hover text-offwhite font-bold py-3 rounded-xl text-sm transition-colors cursor-pointer shadow-md"
+                      >
+                        <Share2 className="h-4 w-4" />
+                        <span>Share Tree Card</span>
+                      </button>
+                    </div>
                   ) : (
-                    <div className="p-3 bg-yellow-50 border border-yellow-100 text-yellow-800 text-center text-xs rounded-xl flex items-center justify-center gap-1.5">
-                      <Info className="h-4 w-4" />
-                      <span>Sign in to log health updates or adopt this tree.</span>
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => setShowShareModal(true)}
+                        className="w-full flex items-center justify-center gap-2 bg-forest hover:bg-forest-hover text-offwhite font-bold py-3 rounded-xl text-sm transition-colors cursor-pointer shadow-md"
+                      >
+                        <Share2 className="h-4 w-4" />
+                        <span>Share Tree Card</span>
+                      </button>
+                      
+                      <div className="p-3 bg-yellow-50 border border-yellow-100 text-yellow-800 text-center text-xs rounded-xl flex items-center justify-center gap-1.5">
+                        <Info className="h-4 w-4" />
+                        <span>Sign in to log health updates or adopt this tree.</span>
+                      </div>
                     </div>
                   )}
 
@@ -557,6 +769,13 @@ export default function LiveMap({ selectedTreeId, setSelectedTreeId }) {
           tree={details}
           history={historyList}
           onClose={() => setShowComplaintModal(false)}
+        />
+      )}
+
+      {showShareModal && details && (
+        <ShareCard 
+          tree={details}
+          onClose={() => setShowShareModal(false)}
         />
       )}
     </div>

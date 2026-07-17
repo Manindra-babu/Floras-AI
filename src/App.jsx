@@ -8,6 +8,7 @@ import LiveMap from './components/LiveMap'
 import ReportTree from './components/ReportTree'
 import Dashboard from './components/Dashboard'
 import MyAdoptedTrees from './components/MyAdoptedTrees'
+import Leaderboard from './components/Leaderboard'
 import Auth from './components/Auth'
 import { AlertCircle, HelpCircle, ShieldAlert } from 'lucide-react'
 
@@ -29,6 +30,8 @@ function AppContent() {
         return <Dashboard setActivePage={setActivePage} setSelectedTreeId={setSelectedTreeId} />
       case 'adopted':
         return <MyAdoptedTrees setActivePage={setActivePage} setSelectedTreeId={setSelectedTreeId} />
+      case 'leaderboard':
+        return <Leaderboard setActivePage={setActivePage} />
       case 'auth':
         return <Auth setActivePage={setActivePage} />
       default:

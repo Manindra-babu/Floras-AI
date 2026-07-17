@@ -74,7 +74,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   // 3. Sign Up
-  const signUp = async (email, password) => {
+  const signUp = async (email, password, displayName) => {
     setLoading(true)
     if (isMockMode) {
       // Mock Sign Up
@@ -90,7 +90,8 @@ export const AuthProvider = ({ children }) => {
       const newUser = {
         id: `mock-user-${Math.random().toString(36).substring(2, 9)}`,
         email,
-        password
+        password,
+        display_name: displayName || email.split('@')[0]
       }
       
       mockUsers.push(newUser)
@@ -99,13 +100,48 @@ export const AuthProvider = ({ children }) => {
       const loggedUser = { id: newUser.id, email: newUser.email, role: 'authenticated' }
       setUser(loggedUser)
       localStorage.setItem('tree_census_mock_user', JSON.stringify(loggedUser))
+
+      // Also save to mock profiles table for leaderboard
+      try {
+        const dbStr = localStorage.getItem('tree_census_db')
+        if (dbStr) {
+          const db = JSON.parse(dbStr)
+          if (!db.profiles) db.profiles = []
+          db.profiles.push({
+            id: loggedUser.id,
+            display_name: newUser.display_name,
+            created_at: new Date().toISOString()
+          })
+          localStorage.setItem('tree_census_db', JSON.stringify(db))
+        }
+      } catch (err) {
+        console.error('Error saving mock profile:', err)
+      }
+
       setLoading(false)
       return { data: { user: loggedUser }, error: null }
     }
 
     try {
-      const { data, error } = await supabase.auth.signUp({ email, password })
+      const { data, error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          data: {
+            display_name: displayName
+          }
+        }
+      })
       if (error) throw error
+
+      if (data?.user) {
+        // Also insert into public.profiles table
+        const { error: profileErr } = await supabase
+          .from('profiles')
+          .insert([{ id: data.user.id, display_name: displayName || email.split('@')[0] }])
+        if (profileErr) console.error("Error creating public profile:", profileErr)
+      }
+
       return { data, error: null }
     } catch (e) {
       setLoading(false)
