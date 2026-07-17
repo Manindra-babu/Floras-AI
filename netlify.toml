@@ -1,0 +1,5 @@
+[[redirects]]
+  from = "/api/plantnet/*"
+  to = "https://my-api.plantnet.org/:splat"
+  status = 200
+  force = true

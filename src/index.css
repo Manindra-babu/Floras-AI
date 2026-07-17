@@ -1,0 +1,102 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+@theme {
+  --color-forest: #1B4332;
+  --color-forest-light: #2D5A47;
+  --color-forest-dark: #112A1F;
+  --color-offwhite: #F8F7F2;
+  --color-offwhite-dark: #EEECE3;
+  --color-terracotta: #C97C4B;
+  --color-terracotta-hover: #B56837;
+  --color-charcoal: #2B2B2B;
+
+  --font-serif: "Lora", Georgia, serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+/* Reset template defaults and ensure full screen capability */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #F8F7F2; /* offwhite */
+  color: #2B2B2B; /* charcoal */
+  font-family: "Inter", system-ui, sans-serif;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Typography styles */
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Lora", Georgia, serif;
+  color: #1B4332; /* forest */
+}
+
+/* Leaflet Map overrides and fixes */
+.leaflet-container {
+  font-family: "Inter", system-ui, sans-serif;
+  background-color: #EEECE3 !important;
+  width: 100%;
+  height: 100%;
+}
+
+/* Custom Pin Drop & Pulse Animations */
+@keyframes pinDrop {
+  0% {
+    transform: translateY(-40px) scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(5px) scale(1.1);
+    opacity: 1;
+  }
+  80% {
+    transform: translateY(-2px) scale(0.95);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pinPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(201, 124, 75, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(201, 124, 75, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(201, 124, 75, 0);
+  }
+}
+
+.animate-pin-drop {
+  animation: pinDrop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.animate-pin-pulse {
+  animation: pinPulse 2s infinite;
+}
+
+/* Smooth custom scrollbars for side panels and dashboard */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F8F7F2;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #C97C4B;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #B56837;
+}

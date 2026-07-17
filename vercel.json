@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/plantnet/:path*",
+      "destination": "https://my-api.plantnet.org/:path*"
+    }
+  ]
+}
