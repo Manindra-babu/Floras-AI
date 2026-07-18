@@ -10,7 +10,8 @@ import {
   ChevronLeft, 
   Sparkles, 
   Loader2, 
-  AlertCircle, 
+  AlertCircle,
+  AlertTriangle,
   FileText, 
   Image as ImageIcon,
   LogIn
@@ -40,6 +41,13 @@ export default function ReportTree({ setActivePage }) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [newTreeId, setNewTreeId] = useState('')
+
+  // Overlap Proximity States
+  const [showOverlapModal, setShowOverlapModal] = useState(false)
+  const [overlappingTree, setOverlappingTree] = useState(null)
+  const [overlappingDistance, setOverlappingDistance] = useState(0)
+  const [selectedCondition, setSelectedCondition] = useState('healthy')
+  const [isUpdatingExisting, setIsUpdatingExisting] = useState(false)
 
   // Map References
   const mapContainerRef = useRef(null)
@@ -220,11 +228,50 @@ export default function ReportTree({ setActivePage }) {
     }
   }
 
-  // 6. Submit Tree Report
+  // 6. Submit Tree Report with Proximity Overlap Checking
   const handleSubmit = async () => {
     setIsSubmitting(true)
     setSubmitError('')
 
+    try {
+      // Fetch existing trees from database
+      const existingTrees = await api.getTrees()
+      
+      let closestTree = null
+      let minDistance = Infinity
+
+      existingTrees.forEach(t => {
+        // Calculate distance in meters using basic local approximation
+        const dLat = (t.latitude - latitude) * 111139
+        const dLon = (t.longitude - longitude) * 111139 * Math.cos(latitude * Math.PI / 180)
+        const dist = Math.sqrt(dLat * dLat + dLon * dLon)
+        
+        if (dist < minDistance) {
+          minDistance = dist
+          closestTree = t
+        }
+      })
+
+      // If a tree exists within 25 meters, trigger the overlap resolution modal
+      if (closestTree && minDistance < 25) {
+        setOverlappingTree(closestTree)
+        setOverlappingDistance(Math.round(minDistance))
+        setSelectedCondition(closestTree.current_status || 'healthy')
+        setShowOverlapModal(true)
+        setIsSubmitting(false)
+      } else {
+        // No overlap, proceed with creating a new tree record
+        await executeCreateNewTree()
+      }
+    } catch (e) {
+      console.error(e)
+      setSubmitError('Failed to process tree report. Please try again.')
+      setIsSubmitting(false)
+    }
+  }
+
+  const executeCreateNewTree = async () => {
+    setIsSubmitting(true)
     try {
       const tree = await api.createTree({
         species: confirmedSpecies.trim() || 'Unknown Species',
@@ -242,6 +289,30 @@ export default function ReportTree({ setActivePage }) {
       setSubmitError('Failed to save tree report. Please try again.')
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleUpdateExistingTree = async () => {
+    setIsUpdatingExisting(true)
+    setSubmitError('')
+
+    try {
+      await api.updateTreeStatus(overlappingTree.id, {
+        status: selectedCondition,
+        note: note || `Reported status check-in. Condition updated to ${selectedCondition}.`,
+        photoFile,
+        updated_by: user.id
+      })
+      
+      // Successfully updated, show success screen referencing the updated tree ID
+      setShowOverlapModal(false)
+      setNewTreeId(overlappingTree.id)
+      setStep(5)
+    } catch (e) {
+      console.error(e)
+      setSubmitError('Failed to update the existing tree. Please try again.')
+    } finally {
+      setIsUpdatingExisting(false)
     }
   }
 
@@ -567,9 +638,13 @@ export default function ReportTree({ setActivePage }) {
               <Check className="h-8 w-8" />
             </div>
 
-            <h2 className="text-3xl font-serif font-bold text-forest mb-2">Tree Reported!</h2>
+            <h2 className="text-3xl font-serif font-bold text-forest mb-2">
+              {overlappingTree && newTreeId === overlappingTree.id ? 'Tree Log Updated!' : 'Tree Reported!'}
+            </h2>
             <p className="text-charcoal/70 text-sm max-w-sm mx-auto mb-6">
-              Thank you for contributing to Floras AI! This tree is now live on our map and public dashboard database.
+              {overlappingTree && newTreeId === overlappingTree.id 
+                ? "Thank you for updating this tree! Your new photo and health condition status have been added to the history timeline of this specimen."
+                : "Thank you for contributing to Floras AI! This tree is now live on our map and public dashboard database."}
             </p>
 
             {/* Mini Map View */}
@@ -598,6 +673,127 @@ export default function ReportTree({ setActivePage }) {
               >
                 Report Another Tree
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Overlap Detection Modal */}
+        {showOverlapModal && overlappingTree && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/40 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white border border-offwhite-dark rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-slide-up">
+              
+              {/* Modal Header */}
+              <div className="bg-[#02462E] text-[#F8F7F2] px-6 py-4 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-[#F1B400]" />
+                <span className="font-serif font-semibold text-base">Nearby Tree Detected</span>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 text-left">
+                <p className="text-charcoal/80 text-xs sm:text-sm leading-relaxed mb-4">
+                  An existing <span className="font-semibold text-forest">{overlappingTree.species.split(' (')[0]}</span> was found <span className="font-semibold text-terracotta">{overlappingDistance} meters</span> away from your selected coordinates.
+                </p>
+                
+                <div className="bg-offwhite p-4 rounded-2xl border border-offwhite-dark mb-5 text-xs text-charcoal/70 space-y-1.5">
+                  <div className="flex justify-between">
+                    <span>Species:</span>
+                    <span className="italic">{overlappingTree.species.split(' (')[0]}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Logged Coordinates:</span>
+                    <span className="font-mono">{overlappingTree.latitude.toFixed(5)}, {overlappingTree.longitude.toFixed(5)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Last Known Status:</span>
+                    <span className="font-bold uppercase text-forest">{overlappingTree.current_status}</span>
+                  </div>
+                </div>
+
+                <p className="text-charcoal/75 text-[11px] mb-4 leading-relaxed">
+                  If this is a new photo of that same tree, you can add it to its timeline and update its current health condition below:
+                </p>
+
+                {/* Condition Selector */}
+                <div className="mb-6">
+                  <label className="block text-xs font-bold text-[#02462E] uppercase tracking-wide mb-2">
+                    Update Tree Condition
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCondition('healthy')}
+                      className={`py-2 px-3 rounded-lg text-xs font-semibold border text-center transition-all ${
+                        selectedCondition === 'healthy'
+                          ? 'bg-[#02462E] border-[#02462E] text-[#F8F7F2] shadow-sm font-bold'
+                          : 'bg-offwhite border-offwhite-dark text-charcoal/70 hover:bg-slate-50'
+                      }`}
+                    >
+                      Healthy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCondition('sick')}
+                      className={`py-2 px-3 rounded-lg text-xs font-semibold border text-center transition-all ${
+                        selectedCondition === 'sick'
+                          ? 'bg-[#F1B400] border-[#F1B400] text-[#02462E] shadow-sm font-bold'
+                          : 'bg-offwhite border-offwhite-dark text-charcoal/70 hover:bg-slate-50'
+                      }`}
+                    >
+                      Sick
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCondition('cut_down')}
+                      className={`py-2 px-3 rounded-lg text-xs font-semibold border text-center transition-all ${
+                        selectedCondition === 'cut_down'
+                          ? 'bg-red-600 border-red-600 text-offwhite shadow-sm font-bold'
+                          : 'bg-offwhite border-offwhite-dark text-charcoal/70 hover:bg-slate-50'
+                      }`}
+                    >
+                      Cut Down
+                    </button>
+                  </div>
+                </div>
+
+                {/* Action CTAs */}
+                <div className="space-y-3">
+                  <button
+                    onClick={handleUpdateExistingTree}
+                    disabled={isUpdatingExisting}
+                    className="w-full py-3 bg-[#02462E] hover:bg-[#0A5C3D] text-[#F1B400] font-semibold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {isUpdatingExisting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin animate-none" />
+                        Updating Tree...
+                      </>
+                    ) : (
+                      'Update Existing Tree & Photo'
+                    )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowOverlapModal(false)
+                      executeCreateNewTree()
+                    }}
+                    disabled={isUpdatingExisting || isSubmitting}
+                    className="w-full py-3 bg-white hover:bg-slate-50 text-charcoal/70 border border-offwhite-dark font-semibold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    No, Create New Tree Record
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowOverlapModal(false)
+                      setOverlappingTree(null)
+                    }}
+                    disabled={isUpdatingExisting}
+                    className="w-full py-2.5 text-center text-xs text-charcoal/50 hover:text-charcoal hover:underline cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+
             </div>
           </div>
         )}
