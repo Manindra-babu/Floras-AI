@@ -99,6 +99,16 @@ export default function LiveMap({ selectedTreeId, setSelectedTreeId, setChatCont
     }
   }
 
+  // Register global callback for Leaflet popup actions
+  useEffect(() => {
+    window.selectTreeFromMap = (id) => {
+      setSelectedTreeId(id)
+    }
+    return () => {
+      delete window.selectTreeFromMap
+    }
+  }, [setSelectedTreeId])
+
   useEffect(() => {
     loadTrees()
   }, [])
@@ -248,29 +258,39 @@ export default function LiveMap({ selectedTreeId, setSelectedTreeId, setChatCont
       }
     })
 
-    // Group trees by geographical coordinates (rounded to 5 decimal places) to handle overlapping markers
-    const coordGroups = {}
+    // Group trees by geographical proximity (within 25 meters / 0.00025 degrees) to handle overlapping markers
+    const groups = []
+    const threshold = 0.00025 // ~25 meters threshold for grouping/overlapping
+
     filteredTrees.forEach(tree => {
-      const key = `${tree.latitude.toFixed(5)},${tree.longitude.toFixed(5)}`
-      if (!coordGroups[key]) {
-        coordGroups[key] = []
+      let foundGroup = groups.find(g => {
+        const center = g[0]
+        const dist = Math.sqrt(
+          Math.pow(tree.latitude - center.latitude, 2) + 
+          Math.pow(tree.longitude - center.longitude, 2)
+        )
+        return dist < threshold
+      })
+
+      if (foundGroup) {
+        foundGroup.push(tree)
+      } else {
+        groups.push([tree])
       }
-      coordGroups[key].push(tree)
     })
 
     // Add or Update markers
-    Object.keys(coordGroups).forEach(key => {
-      const group = coordGroups[key]
+    groups.forEach(group => {
       const count = group.length
 
       group.forEach((tree, index) => {
         let displayLat = tree.latitude
         let displayLon = tree.longitude
 
-        // If multiple overlapping markers exist, offset them radially around the true coordinate
+        // If multiple overlapping markers exist in this proximity, offset them radially
         if (count > 1) {
           const angle = (index * 2 * Math.PI) / count
-          const radius = 0.00007 // ~7-8 meters visual displacement
+          const radius = 0.00015 // ~15 meters visual displacement to make them clearly click-accessible
           displayLat = tree.latitude + radius * Math.cos(angle)
           displayLon = tree.longitude + radius * Math.sin(angle)
         }
@@ -303,10 +323,44 @@ export default function LiveMap({ selectedTreeId, setSelectedTreeId, setChatCont
           iconAnchor: [16, 32]
         })
 
+        // Generate popup HTML content if multiple trees exist
+        let popupContent = null
+        if (count > 1) {
+          popupContent = `
+            <div class="p-2 min-w-[160px] font-sans">
+              <div class="text-[10px] uppercase tracking-wider font-bold text-forest mb-2 flex items-center gap-1">
+                <span>🌳 ${count} Trees Nearby</span>
+              </div>
+              <div class="flex flex-col gap-1.5">
+          `
+          group.forEach(t => {
+            const speciesCommon = t.species.split(' (')[0]
+            const isSelected = t.id === tree.id
+            const btnClass = isSelected
+              ? 'bg-[#F1B400] text-[#02462E] font-bold border-[#F1B400] shadow-sm cursor-default'
+              : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 hover:border-slate-300 cursor-pointer animate-none'
+            popupContent += `
+              <button 
+                onclick="window.selectTreeFromMap('${t.id}')" 
+                class="text-left text-[11px] px-2.5 py-1.5 border rounded-lg transition-all w-full font-medium ${btnClass}"
+              >
+                ${speciesCommon}
+              </button>
+            `
+          })
+          popupContent += `</div></div>`
+        }
+
         if (currentMarkers[tree.id]) {
           // Update existing marker's icon and position
           currentMarkers[tree.id].setIcon(customIcon)
           currentMarkers[tree.id].setLatLng([displayLat, displayLon])
+          
+          if (popupContent) {
+            currentMarkers[tree.id].bindPopup(popupContent, { closeButton: false })
+          } else {
+            currentMarkers[tree.id].unbindPopup()
+          }
         } else {
           // Create new marker at offset position
           const marker = L.marker([displayLat, displayLon], { icon: customIcon })
@@ -315,6 +369,11 @@ export default function LiveMap({ selectedTreeId, setSelectedTreeId, setChatCont
               setSelectedTreeId(tree.id)
               map.panTo([displayLat, displayLon])
             })
+          
+          if (popupContent) {
+            marker.bindPopup(popupContent, { closeButton: false })
+          }
+          
           currentMarkers[tree.id] = marker
         }
       })
@@ -485,7 +544,14 @@ export default function LiveMap({ selectedTreeId, setSelectedTreeId, setChatCont
                 {/* Same Location Trees Switcher */}
                 {(() => {
                   const sameLocationTrees = details 
-                    ? filteredTrees.filter(t => t.id !== details.id && t.latitude.toFixed(5) === details.latitude.toFixed(5) && t.longitude.toFixed(5) === details.longitude.toFixed(5))
+                    ? filteredTrees.filter(t => {
+                        if (t.id === details.id) return false
+                        const dist = Math.sqrt(
+                          Math.pow(t.latitude - details.latitude, 2) + 
+                          Math.pow(t.longitude - details.longitude, 2)
+                        )
+                        return dist < 0.00025 // ~25 meters threshold
+                      })
                     : []
                   if (sameLocationTrees.length === 0) return null
                   return (
