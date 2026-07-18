@@ -24,7 +24,8 @@ import {
   Check,
   Eye,
   Stethoscope,
-  Loader2
+  Loader2,
+  TreePine
 } from 'lucide-react'
 import ImageSlider from './ImageSlider'
 import ShareCard from './ShareCard'
@@ -342,9 +343,10 @@ export default function LiveMap({ selectedTreeId, setSelectedTreeId, setChatCont
             popupContent += `
               <button 
                 onclick="window.selectTreeFromMap('${t.id}')" 
-                class="text-left text-[11px] px-2.5 py-1.5 border rounded-lg transition-all w-full font-medium ${btnClass}"
+                class="text-left text-[11px] px-2 py-1.5 border rounded-lg transition-all w-full font-semibold flex items-center gap-2 ${btnClass}"
               >
-                ${speciesCommon}
+                <img src="${t.photo_url}" class="w-6 h-6 rounded object-cover border border-black/10 shrink-0" alt="" />
+                <span class="truncate">${speciesCommon}</span>
               </button>
             `
           })
@@ -565,17 +567,19 @@ export default function LiveMap({ selectedTreeId, setSelectedTreeId, setChatCont
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {/* Current selected tree */}
-                        <span className="px-3 py-1.5 bg-amber-200 text-amber-950 border border-amber-300 font-semibold rounded-lg cursor-default shadow-sm">
-                          {details.species.split(' (')[0]} (Selected)
+                        <span className="px-3 py-1.5 bg-amber-200 text-amber-950 border border-amber-300 font-bold rounded-lg cursor-default shadow-sm flex items-center gap-2">
+                          <img src={details.photo_url} className="w-5 h-5 rounded object-cover border border-black/10 shrink-0" alt="" />
+                          <span>{details.species.split(' (')[0]} (Selected)</span>
                         </span>
                         {/* Other trees */}
                         {sameLocationTrees.map(t => (
                           <button
                             key={t.id}
                             onClick={() => setSelectedTreeId(t.id)}
-                            className="px-3 py-1.5 bg-white hover:bg-amber-100 text-amber-950 border border-amber-200 hover:border-amber-300 rounded-lg transition-colors cursor-pointer shadow-sm font-medium"
+                            className="px-3 py-1.5 bg-white hover:bg-amber-100 text-amber-950 border border-amber-200 hover:border-amber-300 rounded-lg transition-colors cursor-pointer shadow-sm font-medium flex items-center gap-2"
                           >
-                            {t.species.split(' (')[0]}
+                            <img src={t.photo_url} className="w-5 h-5 rounded object-cover border border-black/10 shrink-0" alt="" />
+                            <span>{t.species.split(' (')[0]}</span>
                           </button>
                         ))}
                       </div>
