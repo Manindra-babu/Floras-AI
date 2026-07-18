@@ -74,8 +74,8 @@ export default function Dashboard({ setActivePage, setSelectedTreeId }) {
 
   // Process data for charts
   const conditionData = [
-    { name: 'Healthy', value: stats.totalTrees - stats.sickTrees - stats.cutDownTrees, color: '#1B4332' },
-    { name: 'Sick / Declining', value: stats.sickTrees, color: '#C97C4B' },
+    { name: 'Healthy', value: stats.totalTrees - stats.sickTrees - stats.cutDownTrees, color: '#02462E' },
+    { name: 'Sick / Declining', value: stats.sickTrees, color: '#F1B400' },
     { name: 'Cut Down', value: stats.cutDownTrees, color: '#EF4444' }
   ].filter(item => item.value > 0)
 
@@ -250,9 +250,9 @@ export default function Dashboard({ setActivePage, setSelectedTreeId }) {
                       fontSize: '11px' 
                     }}
                   />
-                  <Bar dataKey="count" fill="#1B4332" radius={[0, 8, 8, 0]} barSize={16}>
+                  <Bar dataKey="count" fill="#02462E" radius={[0, 8, 8, 0]} barSize={16}>
                     {speciesData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill="#1B4332" />
+                      <Cell key={`cell-${index}`} fill="#02462E" />
                     ))}
                   </Bar>
                 </BarChart>

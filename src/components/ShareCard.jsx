@@ -38,7 +38,7 @@ export default function ShareCard({ tree, onClose }) {
       const canvas = await html2canvas(cardRef.current, {
         useCORS: true,
         allowTaint: true,
-        backgroundColor: '#1B4332', // fallback forest color
+        backgroundColor: '#02462E', // fallback forest color
         scale: 2 // double quality for crisp text
       })
 
