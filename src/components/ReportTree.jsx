@@ -41,6 +41,7 @@ export default function ReportTree({ setActivePage }) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [newTreeId, setNewTreeId] = useState('')
+  const [initialStatus, setInitialStatus] = useState('healthy')
 
   // Overlap Proximity States
   const [showOverlapModal, setShowOverlapModal] = useState(false)
@@ -280,7 +281,8 @@ export default function ReportTree({ setActivePage }) {
         longitude,
         note,
         photoFile,
-        reported_by: user.id
+        reported_by: user.id,
+        status: initialStatus
       })
       setNewTreeId(tree.id)
       setStep(5) // Move to success step
@@ -574,7 +576,53 @@ export default function ReportTree({ setActivePage }) {
               </div>
               <div className="flex justify-between">
                 <span className="font-semibold">Initial Health:</span>
-                <span className="text-forest font-semibold uppercase tracking-wide">Healthy</span>
+                <span className={`font-semibold uppercase tracking-wide ${
+                  initialStatus === 'healthy' ? 'text-forest' : initialStatus === 'sick' ? 'text-yellow-600' : 'text-red-600'
+                }`}>
+                  {initialStatus.replace('_', ' ')}
+                </span>
+              </div>
+            </div>
+
+            {/* Condition Selector */}
+            <div className="mb-6">
+              <label className="block text-xs font-bold text-[#02462E] uppercase tracking-wide mb-2">
+                Initial Tree Health Condition
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setInitialStatus('healthy')}
+                  className={`py-2.5 px-3 rounded-xl text-xs font-semibold border text-center transition-all cursor-pointer ${
+                    initialStatus === 'healthy'
+                      ? 'bg-[#02462E] border-[#02462E] text-[#F8F7F2] shadow-sm font-bold'
+                      : 'bg-[#F8F7F2] border-offwhite-dark text-charcoal/70 hover:bg-slate-50'
+                  }`}
+                >
+                  Healthy
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInitialStatus('sick')}
+                  className={`py-2.5 px-3 rounded-xl text-xs font-semibold border text-center transition-all cursor-pointer ${
+                    initialStatus === 'sick'
+                      ? 'bg-[#F1B400] border-[#F1B400] text-[#02462E] shadow-sm font-bold'
+                      : 'bg-[#F8F7F2] border-offwhite-dark text-charcoal/70 hover:bg-slate-50'
+                  }`}
+                >
+                  Sick / Injured
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInitialStatus('cut_down')}
+                  className={`py-2.5 px-3 rounded-xl text-xs font-semibold border text-center transition-all cursor-pointer ${
+                    initialStatus === 'cut_down'
+                      ? 'bg-red-600 border-red-600 text-offwhite shadow-sm font-bold'
+                      : 'bg-[#F8F7F2] border-offwhite-dark text-charcoal/70 hover:bg-slate-50'
+                  }`}
+                >
+                  Stump / Cut Down
+                </button>
               </div>
             </div>
 
@@ -668,6 +716,7 @@ export default function ReportTree({ setActivePage }) {
                   setConfirmedSpecies('')
                   setIdentifiedSpecies('')
                   setNote('')
+                  setInitialStatus('healthy')
                 }}
                 className="w-full bg-offwhite border border-offwhite-dark hover:bg-offwhite-dark/80 text-forest text-sm font-semibold px-5 py-3 rounded-xl transition-all cursor-pointer"
               >

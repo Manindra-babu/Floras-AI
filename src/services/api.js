@@ -500,7 +500,7 @@ export const api = {
   },
 
   // 6. REPORT A TREE (CREATE)
-  createTree: async ({ species, species_confidence, latitude, longitude, note, photoFile, reported_by }) => {
+  createTree: async ({ species, species_confidence, latitude, longitude, note, photoFile, reported_by, status = 'healthy' }) => {
     let photoUrl = ''
 
     if (isMockMode) {
@@ -519,7 +519,7 @@ export const api = {
         species_confidence: species_confidence || 1.0,
         latitude,
         longitude,
-        current_status: 'healthy',
+        current_status: status,
         photo_url: photoUrl,
         note: note || '',
         reported_by: reported_by || 'mock-user-guest',
@@ -529,9 +529,9 @@ export const api = {
       const newHistory = {
         id: `hist-${Math.random().toString(36).substring(2, 9)}`,
         tree_id: newTree.id,
-        status: 'healthy',
+        status: status,
         photo_url: photoUrl,
-        note: 'Tree registered as healthy.',
+        note: note || `Tree registered as ${status}.`,
         updated_by: reported_by || 'mock-user-guest',
         created_at: newTree.created_at
       }
@@ -573,7 +573,7 @@ export const api = {
           species_confidence: species_confidence || 1.0,
           latitude,
           longitude,
-          current_status: 'healthy',
+          current_status: status,
           photo_url: photoUrl,
           note: note || '',
           reported_by
@@ -588,9 +588,9 @@ export const api = {
         .from('tree_status_history')
         .insert([{
           tree_id: tree.id,
-          status: 'healthy',
+          status: status,
           photo_url: photoUrl,
-          note: 'Tree registered as healthy.',
+          note: note || `Tree registered as ${status}.`,
           updated_by: reported_by
         }])
 
