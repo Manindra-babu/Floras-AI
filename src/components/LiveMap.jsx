@@ -230,7 +230,7 @@ export default function LiveMap({ selectedTreeId, setSelectedTreeId, setChatCont
     }
   }, [filteredTrees])
 
-  // 5. Update Map Markers based on Filtered Trees
+  // 5. Update Map Markers based on Filtered Trees (separating overlapping markers on-the-fly)
   useEffect(() => {
     if (!mapInstanceRef.current) return
 
@@ -248,50 +248,76 @@ export default function LiveMap({ selectedTreeId, setSelectedTreeId, setChatCont
       }
     })
 
-    // Add or Update markers
+    // Group trees by geographical coordinates (rounded to 5 decimal places) to handle overlapping markers
+    const coordGroups = {}
     filteredTrees.forEach(tree => {
-      // Choose Pin Color & Icon based on status
-      let colorClass = 'bg-forest'
-      let pulseClass = ''
-      let svgPath = '<path d="m12 2 8 8H4z"/><path d="m12 8 6 6H6z"/><path d="m12 14 4 4H8z"/><path d="M12 18v4"/>' // Tree Icon
-
-      if (tree.current_status === 'sick') {
-        colorClass = 'bg-yellow-500'
-        pulseClass = 'animate-pin-pulse'
-        svgPath = '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>' // Warning Icon
-      } else if (tree.current_status === 'cut_down') {
-        colorClass = 'bg-red-600'
-        svgPath = '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>' // Trash/Removed Icon
+      const key = `${tree.latitude.toFixed(5)},${tree.longitude.toFixed(5)}`
+      if (!coordGroups[key]) {
+        coordGroups[key] = []
       }
+      coordGroups[key].push(tree)
+    })
 
-      const ringClass = tree.verified ? 'ring-2 ring-amber-400 ring-offset-1' : ''
+    // Add or Update markers
+    Object.keys(coordGroups).forEach(key => {
+      const group = coordGroups[key]
+      const count = group.length
 
-      // Generate HTML string for custom Pin drop
-      const pinHtml = `<div class="w-8 h-8 rounded-full ${colorClass} ${pulseClass} ${ringClass} border-2 border-offwhite flex items-center justify-center text-offwhite shadow-lg animate-pin-drop">
-                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide">${svgPath}</svg>
-                       </div>`
+      group.forEach((tree, index) => {
+        let displayLat = tree.latitude
+        let displayLon = tree.longitude
 
-      const customIcon = L.divIcon({
-        className: `custom-tree-pin-${tree.id}`,
-        html: pinHtml,
-        iconSize: [32, 32],
-        iconAnchor: [16, 32]
+        // If multiple overlapping markers exist, offset them radially around the true coordinate
+        if (count > 1) {
+          const angle = (index * 2 * Math.PI) / count
+          const radius = 0.00007 // ~7-8 meters visual displacement
+          displayLat = tree.latitude + radius * Math.cos(angle)
+          displayLon = tree.longitude + radius * Math.sin(angle)
+        }
+
+        // Choose Pin Color & Icon based on status
+        let colorClass = 'bg-forest'
+        let pulseClass = ''
+        let svgPath = '<path d="m12 2 8 8H4z"/><path d="m12 8 6 6H6z"/><path d="m12 14 4 4H8z"/><path d="M12 18v4"/>' // Tree Icon
+
+        if (tree.current_status === 'sick') {
+          colorClass = 'bg-yellow-500'
+          pulseClass = 'animate-pin-pulse'
+          svgPath = '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>' // Warning Icon
+        } else if (tree.current_status === 'cut_down') {
+          colorClass = 'bg-red-600'
+          svgPath = '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>' // Trash/Removed Icon
+        }
+
+        const ringClass = tree.verified ? 'ring-2 ring-amber-400 ring-offset-1' : ''
+
+        // Generate HTML string for custom Pin drop
+        const pinHtml = `<div class="w-8 h-8 rounded-full ${colorClass} ${pulseClass} ${ringClass} border-2 border-offwhite flex items-center justify-center text-offwhite shadow-lg animate-pin-drop">
+                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide">${svgPath}</svg>
+                         </div>`
+
+        const customIcon = L.divIcon({
+          className: `custom-tree-pin-${tree.id}`,
+          html: pinHtml,
+          iconSize: [32, 32],
+          iconAnchor: [16, 32]
+        })
+
+        if (currentMarkers[tree.id]) {
+          // Update existing marker's icon and position
+          currentMarkers[tree.id].setIcon(customIcon)
+          currentMarkers[tree.id].setLatLng([displayLat, displayLon])
+        } else {
+          // Create new marker at offset position
+          const marker = L.marker([displayLat, displayLon], { icon: customIcon })
+            .addTo(map)
+            .on('click', () => {
+              setSelectedTreeId(tree.id)
+              map.panTo([displayLat, displayLon])
+            })
+          currentMarkers[tree.id] = marker
+        }
       })
-
-      if (currentMarkers[tree.id]) {
-        // Update existing marker's icon and position
-        currentMarkers[tree.id].setIcon(customIcon)
-        currentMarkers[tree.id].setLatLng([tree.latitude, tree.longitude])
-      } else {
-        // Create new marker
-        const marker = L.marker([tree.latitude, tree.longitude], { icon: customIcon })
-          .addTo(map)
-          .on('click', () => {
-            setSelectedTreeId(tree.id)
-            map.panTo([tree.latitude, tree.longitude])
-          })
-        currentMarkers[tree.id] = marker
-      }
     })
 
     // If map needs auto-centering after filtering
@@ -456,6 +482,41 @@ export default function LiveMap({ selectedTreeId, setSelectedTreeId, setChatCont
               </div>
             ) : details ? (
               <>
+                {/* Same Location Trees Switcher */}
+                {(() => {
+                  const sameLocationTrees = details 
+                    ? filteredTrees.filter(t => t.id !== details.id && t.latitude.toFixed(5) === details.latitude.toFixed(5) && t.longitude.toFixed(5) === details.longitude.toFixed(5))
+                    : []
+                  if (sameLocationTrees.length === 0) return null
+                  return (
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs text-amber-900 mb-6 shadow-sm">
+                      <div className="flex items-center gap-1.5 font-bold mb-1 text-amber-800">
+                        <TreePine className="h-4 w-4 text-amber-700" />
+                        <span>{sameLocationTrees.length + 1} Trees at this Spot</span>
+                      </div>
+                      <p className="text-amber-800/80 mb-3 leading-relaxed text-[11px]">
+                        Multiple trees are registered at these exact coordinates. Tap to view records:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {/* Current selected tree */}
+                        <span className="px-3 py-1.5 bg-amber-200 text-amber-950 border border-amber-300 font-semibold rounded-lg cursor-default shadow-sm">
+                          {details.species.split(' (')[0]} (Selected)
+                        </span>
+                        {/* Other trees */}
+                        {sameLocationTrees.map(t => (
+                          <button
+                            key={t.id}
+                            onClick={() => setSelectedTreeId(t.id)}
+                            className="px-3 py-1.5 bg-white hover:bg-amber-100 text-amber-950 border border-amber-200 hover:border-amber-300 rounded-lg transition-colors cursor-pointer shadow-sm font-medium"
+                          >
+                            {t.species.split(' (')[0]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
+
                 {/* Photo Carousel / Main Image */}
                 {/* Photo Comparison / Carousel / Main Image */}
                 {compareMode && photoHistory.length >= 2 ? (
