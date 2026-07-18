@@ -359,7 +359,7 @@ export const api = {
       const sickCount = db.trees.filter(t => t.current_status === 'sick').length
       const cutCount = db.trees.filter(t => t.current_status === 'cut_down').length
       
-      const complaintsSent = db.status_history.filter(h => h.status === 'sick' || h.status === 'cut_down').length + 8 // offset for realistic stats
+      const complaintsSent = db.status_history.filter(h => h.status === 'sick' || h.status === 'cut_down').length
       const verifiedCount = db.trees.filter(t => t.verified).length
       const verifiedPct = treesCount > 0 ? Math.round((verifiedCount / treesCount) * 100) : 0
 
@@ -404,7 +404,7 @@ export const api = {
         totalTrees: totalTrees || 0,
         sickTrees: sickTrees || 0,
         cutDownTrees: cutDownTrees || 0,
-        alertsSent: (alertsSent || 0) + 8, // demo offset
+        alertsSent: alertsSent || 0,
         verifiedPercentage: verifiedPct
       }
     } catch (e) {
