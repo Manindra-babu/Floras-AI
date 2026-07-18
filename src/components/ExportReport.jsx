@@ -53,7 +53,7 @@ export default function ExportReport({ onClose }) {
       doc.setFontSize(18)
       doc.setTextColor(27, 67, 50)
       doc.setFont('helvetica', 'bold')
-      doc.text('TREE CENSUS AI — CIVIC HEALTH REPORT', 14, 22)
+      doc.text('FLORAS AI — CIVIC HEALTH REPORT', 14, 22)
 
       doc.setFontSize(9)
       doc.setTextColor(115, 115, 115)
@@ -123,7 +123,7 @@ export default function ExportReport({ onClose }) {
         doc.setFontSize(8)
         doc.setTextColor(115, 115, 115)
         doc.setFont('helvetica', 'italic')
-        doc.text('This document was compiled by community members via the Tree Census AI open platform.', 14, finalY)
+        doc.text('This document was compiled by community members via the Floras AI open platform.', 14, finalY)
         doc.text('For questions or to coordinate municipal operations, please consult the online portal.', 14, finalY + 4)
       }
 

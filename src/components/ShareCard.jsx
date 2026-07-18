@@ -64,7 +64,7 @@ export default function ShareCard({ tree, onClose }) {
     
     // Caption
     const speciesCommon = tree.species.split(' (')[0]
-    const text = `🌳 I reported a ${speciesCommon} near ${areaName} on Tree Census AI! \n\nHelp protect our urban forest. Join the census: ${window.location.origin}`
+    const text = `🌳 I reported a ${speciesCommon} near ${areaName} on Floras AI! \n\nHelp protect our urban forest. Join the census: ${window.location.origin}`
     
     // Open WhatsApp
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank')
@@ -155,7 +155,7 @@ export default function ShareCard({ tree, onClose }) {
 
               {/* Watermark Logo */}
               <div className="border-t border-white/10 pt-1.5 flex items-center justify-between text-[8px] text-offwhite/50 uppercase tracking-wider font-semibold">
-                <span>Tree Census AI</span>
+                <span>Floras AI</span>
                 <span>Urban Forest Patrol</span>
               </div>
             </div>

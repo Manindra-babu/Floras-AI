@@ -569,7 +569,7 @@ export default function ReportTree({ setActivePage }) {
 
             <h2 className="text-3xl font-serif font-bold text-forest mb-2">Tree Reported!</h2>
             <p className="text-charcoal/70 text-sm max-w-sm mx-auto mb-6">
-              Thank you for contributing to the Tree Census! This tree is now live on our map and public dashboard database.
+              Thank you for contributing to Floras AI! This tree is now live on our map and public dashboard database.
             </p>
 
             {/* Mini Map View */}

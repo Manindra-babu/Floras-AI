@@ -65,7 +65,7 @@ export default function SendComplaint({ tree, history, onClose }) {
 
 To: ${RECIPIENT_EMAILS[recipientType].label} (${RECIPIENT_EMAILS[recipientType].email})
 
-I am writing to formally report an issue regarding a local urban tree tracked in the public Tree Census AI database. 
+I am writing to formally report an issue regarding a local urban tree tracked in the public Floras AI database. 
 
 TREE LOG DATA:
 ------------------------------------------
@@ -87,7 +87,7 @@ Please dispatch an inspector to review the tree's health condition or investigat
 
 Sincerely,
 Concerned Local Resident
-Reported via Tree Census AI Community Initiative.`
+Reported via Floras AI Community Initiative.`
   }
 
   // Handle Copy to Clipboard
@@ -104,7 +104,7 @@ Reported via Tree Census AI Community Initiative.`
     const subject = encodeURIComponent(`Tree Protection Alert: ${tree.current_status === 'sick' ? 'Diseased' : 'Cut Down'} ${tree.species.split(' (')[0]}`)
     
     // Body needs to exclude the header stuff
-    const bodyText = `I am writing to formally report an issue regarding a local urban tree tracked in the public Tree Census AI database. 
+    const bodyText = `I am writing to formally report an issue regarding a local urban tree tracked in the public Floras AI database. 
 
 TREE LOG DATA:
 • Tree Species: ${tree.species}
@@ -124,7 +124,7 @@ Please dispatch an inspector to review the tree's health condition or investigat
 
 Sincerely,
 Concerned Local Resident
-Reported via Tree Census AI Community Initiative.`
+Reported via Floras AI Community Initiative.`
 
     const body = encodeURIComponent(bodyText)
     window.location.href = `mailto:${recipient}?subject=${subject}&body=${body}`

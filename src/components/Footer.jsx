@@ -10,7 +10,7 @@ export default function Footer() {
           <div className="flex flex-col items-center md:items-start gap-2">
             <div className="flex items-center gap-2">
               <TreePine className="h-6 w-6 text-terracotta" />
-              <span className="font-serif font-semibold text-lg text-offwhite">Tree Census AI</span>
+              <span className="font-serif font-semibold text-lg text-offwhite">Floras AI</span>
             </div>
             <p className="text-xs text-offwhite/60">
               Visualizing urban tree health, protecting our greenspace.
@@ -32,7 +32,7 @@ export default function Footer() {
               <span>for the community</span>
             </div>
             <p className="text-center md:text-right">
-              &copy; {new Date().getFullYear()} Tree Census AI. All rights reserved.
+              &copy; {new Date().getFullYear()} Floras AI. All rights reserved.
             </p>
           </div>
         </div>

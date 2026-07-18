@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }) => {
       
       // Default mock users
       const defaultUsers = [
-        { id: 'mock-user-admin', email: 'admin@treecensus.org', password: 'password123' },
+        { id: 'mock-user-admin', email: 'admin@floras-ai.org', password: 'password123' },
         { id: 'mock-user-user1', email: 'naturelover@gmail.com', password: 'password123' }
       ]
       
@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }) => {
         return { data: { user: loggedUser }, error: null }
       } else {
         setLoading(false)
-        return { data: { user: null }, error: { message: 'Invalid mock credentials. Try admin@treecensus.org with password123.' } }
+        return { data: { user: null }, error: { message: 'Invalid mock credentials. Try admin@floras-ai.org with password123.' } }
       }
     }
 
@@ -82,7 +82,7 @@ export const AuthProvider = ({ children }) => {
 
       const mockUsers = JSON.parse(localStorage.getItem('tree_census_mock_registered_users') || '[]')
       
-      if (email === 'admin@treecensus.org' || email === 'naturelover@gmail.com' || mockUsers.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+      if (email === 'admin@floras-ai.org' || email === 'naturelover@gmail.com' || mockUsers.some(u => u.email.toLowerCase() === email.toLowerCase())) {
         setLoading(false)
         return { data: { user: null }, error: { message: 'User already exists.' } }
       }

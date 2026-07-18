@@ -247,7 +247,7 @@ export const api = {
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
         {
           headers: {
-            'User-Agent': 'TreeCensusAI/1.0 (contact: treecensus@example.com)'
+            'User-Agent': 'FlorasAI/1.0 (contact: florasai@example.com)'
           }
         }
       )

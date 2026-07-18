@@ -428,7 +428,7 @@ export default function LiveMap({ selectedTreeId, setSelectedTreeId, setChatCont
           <div className="flex justify-between items-center bg-forest text-offwhite px-5 py-4 shrink-0">
             <div className="min-w-0">
               <span className="block text-[10px] text-offwhite/70 uppercase tracking-wide font-medium leading-none">
-                Tree Census Log Details
+                Floras AI Log Details
               </span>
               <h3 className="font-serif font-semibold text-base truncate mt-1 max-w-[240px] flex items-center gap-1.5">
                 {details?.species?.split(' (')[0] || 'Loading...'}

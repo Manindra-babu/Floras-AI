@@ -24,7 +24,7 @@ export default function Header({ activePage, setActivePage }) {
               <TreePine className="h-6 w-6" />
             </div>
             <div>
-              <span className="font-serif font-bold text-xl tracking-tight block leading-none">Tree Census AI</span>
+              <span className="font-serif font-bold text-xl tracking-tight block leading-none">Floras AI</span>
               <span className="text-[10px] text-offwhite/70 block tracking-wider uppercase mt-0.5">Community-Driven</span>
             </div>
           </div>

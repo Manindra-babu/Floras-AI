@@ -118,7 +118,7 @@ export default function Auth({ setActivePage }) {
               <p className="mt-0.5">
                 No keys configured. Sign in with:
                 <br />
-                <span className="font-mono text-terracotta font-semibold">admin@treecensus.org</span> / <span className="font-mono text-terracotta font-semibold">password123</span>
+                <span className="font-mono text-terracotta font-semibold">admin@floras-ai.org</span> / <span className="font-mono text-terracotta font-semibold">password123</span>
                 <br />
                 Or register a new account to test flows instantly.
               </p>

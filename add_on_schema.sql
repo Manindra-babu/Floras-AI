@@ -1,5 +1,5 @@
 -- ===================================================
--- Supabase Schema Add-on for Tree Census AI
+-- Supabase Schema Add-on for Floras AI
 -- Run this in your Supabase SQL Editor
 -- ===================================================
 

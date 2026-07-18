@@ -95,7 +95,7 @@ export default function LandingPage({ setActivePage }) {
       <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-serif font-bold text-forest mb-4">
-            How Tree Census AI Works
+            How Floras AI Works
           </h2>
           <p className="text-charcoal/70 max-w-xl mx-auto text-sm sm:text-base">
             It takes less than a minute to add a tree to the public database and begin monitoring its health.

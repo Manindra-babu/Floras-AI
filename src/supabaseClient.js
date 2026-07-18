@@ -7,7 +7,7 @@ export const isMockMode = !supabaseUrl || !supabaseAnonKey || supabaseUrl.includ
 
 if (isMockMode) {
   console.warn(
-    'Tree Census AI: Running in MOCK MODE because Supabase environment variables are missing or default. Data will be persisted in LocalStorage.'
+    'Floras AI: Running in MOCK MODE because Supabase environment variables are missing or default. Data will be persisted in LocalStorage.'
   )
 }
 
