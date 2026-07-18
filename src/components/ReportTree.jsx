@@ -42,6 +42,7 @@ export default function ReportTree({ setActivePage }) {
   const [submitError, setSubmitError] = useState('')
   const [newTreeId, setNewTreeId] = useState('')
   const [initialStatus, setInitialStatus] = useState('healthy')
+  const [isStatusManuallySet, setIsStatusManuallySet] = useState(false)
 
   // Overlap Proximity States
   const [showOverlapModal, setShowOverlapModal] = useState(false)
@@ -84,6 +85,26 @@ export default function ReportTree({ setActivePage }) {
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     )
   }
+
+  // Smart Note Assist: auto-detect health status from keywords in field notes
+  useEffect(() => {
+    if (isStatusManuallySet) return
+    
+    const lowercaseNote = note.toLowerCase()
+    const sickKeywords = ['sick', 'split', 'broken', 'wound', 'cavity', 'disease', 'decay', 'infestation', 'pest', 'fungus', 'dry', 'dying', 'damaged', 'injured', 'hollow', 'rot', 'falling', 'bark']
+    const cutKeywords = ['cut', 'stump', 'felled', 'chopped', 'removed', 'cleared', 'log']
+
+    const hasSickKeyword = sickKeywords.some(kw => lowercaseNote.includes(kw))
+    const hasCutKeyword = cutKeywords.some(kw => lowercaseNote.includes(kw))
+
+    if (hasCutKeyword) {
+      setInitialStatus('cut_down')
+    } else if (hasSickKeyword) {
+      setInitialStatus('sick')
+    } else {
+      setInitialStatus('healthy')
+    }
+  }, [note, isStatusManuallySet])
 
   // Auto-fetch location once when user starts Step 2
   useEffect(() => {
@@ -592,7 +613,7 @@ export default function ReportTree({ setActivePage }) {
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => setInitialStatus('healthy')}
+                  onClick={() => { setInitialStatus('healthy'); setIsStatusManuallySet(true); }}
                   className={`py-2.5 px-3 rounded-xl text-xs font-semibold border text-center transition-all cursor-pointer ${
                     initialStatus === 'healthy'
                       ? 'bg-[#02462E] border-[#02462E] text-[#F8F7F2] shadow-sm font-bold'
@@ -603,7 +624,7 @@ export default function ReportTree({ setActivePage }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setInitialStatus('sick')}
+                  onClick={() => { setInitialStatus('sick'); setIsStatusManuallySet(true); }}
                   className={`py-2.5 px-3 rounded-xl text-xs font-semibold border text-center transition-all cursor-pointer ${
                     initialStatus === 'sick'
                       ? 'bg-[#F1B400] border-[#F1B400] text-[#02462E] shadow-sm font-bold'
@@ -614,7 +635,7 @@ export default function ReportTree({ setActivePage }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setInitialStatus('cut_down')}
+                  onClick={() => { setInitialStatus('cut_down'); setIsStatusManuallySet(true); }}
                   className={`py-2.5 px-3 rounded-xl text-xs font-semibold border text-center transition-all cursor-pointer ${
                     initialStatus === 'cut_down'
                       ? 'bg-red-600 border-red-600 text-offwhite shadow-sm font-bold'
@@ -717,8 +738,9 @@ export default function ReportTree({ setActivePage }) {
                   setIdentifiedSpecies('')
                   setNote('')
                   setInitialStatus('healthy')
+                  setIsStatusManuallySet(false)
                 }}
-                className="w-full bg-offwhite border border-offwhite-dark hover:bg-offwhite-dark/80 text-forest text-sm font-semibold px-5 py-3 rounded-xl transition-all cursor-pointer"
+                className="w-full bg-[#F8F7F2] border border-offwhite-dark hover:bg-slate-100 text-forest text-sm font-semibold px-5 py-3 rounded-xl transition-all cursor-pointer"
               >
                 Report Another Tree
               </button>
